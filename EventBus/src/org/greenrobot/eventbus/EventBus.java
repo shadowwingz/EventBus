@@ -132,10 +132,13 @@ public class EventBus {
      * ThreadMode} and priority.
      */
     public void register(Object subscriber) {
+        // 获取订阅者的 Class 对象
         Class<?> subscriberClass = subscriber.getClass();
+        // 获取订阅者所有的订阅方法
         List<SubscriberMethod> subscriberMethods = subscriberMethodFinder.findSubscriberMethods(subscriberClass);
         synchronized (this) {
             for (SubscriberMethod subscriberMethod : subscriberMethods) {
+                // 订阅
                 subscribe(subscriber, subscriberMethod);
             }
         }
@@ -144,8 +147,11 @@ public class EventBus {
     // Must be called in synchronized block
     private void subscribe(Object subscriber, SubscriberMethod subscriberMethod) {
         Class<?> eventType = subscriberMethod.eventType;
+        // 创建 Subscription 对象
         Subscription newSubscription = new Subscription(subscriber, subscriberMethod);
+        // 检查 subscriptionsByEventType 里是否添加过该 subscriptions，如果添加过就抛异常
         CopyOnWriteArrayList<Subscription> subscriptions = subscriptionsByEventType.get(eventType);
+        // 如果没有添加过，就保存
         if (subscriptions == null) {
             subscriptions = new CopyOnWriteArrayList<>();
             subscriptionsByEventType.put(eventType, subscriptions);
@@ -156,6 +162,7 @@ public class EventBus {
             }
         }
 
+        // 根据优先级 priority 添加 subscriptions 对象
         int size = subscriptions.size();
         for (int i = 0; i <= size; i++) {
             if (i == size || subscriberMethod.priority > subscriptions.get(i).subscriberMethod.priority) {
