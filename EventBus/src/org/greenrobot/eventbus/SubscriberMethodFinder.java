@@ -58,15 +58,21 @@ class SubscriberMethodFinder {
             return subscriberMethods;
         }
 
+        // EventBusAnnotationProcessor 会生成一个 MyEventBusIndex 类
+        // 是否忽略这个类
         if (ignoreGeneratedIndex) {
+            // 如果忽略，就利用反射来读取订阅类中的订阅方法信息
             subscriberMethods = findUsingReflection(subscriberClass);
         } else {
+            // 否则直接从 MyEventBusIndex 类中获取订阅类的订阅方法信息
             subscriberMethods = findUsingInfo(subscriberClass);
         }
+        // 如果一个订阅方法都没有，就抛异常
         if (subscriberMethods.isEmpty()) {
             throw new EventBusException("Subscriber " + subscriberClass
                     + " and its super classes have no public methods with the @Subscribe annotation");
         } else {
+            // 将订阅方法缓存起来，key 是订阅类，value 是所有的订阅方法
             METHOD_CACHE.put(subscriberClass, subscriberMethods);
             return subscriberMethods;
         }
@@ -93,8 +99,11 @@ class SubscriberMethodFinder {
     }
 
     private List<SubscriberMethod> getMethodsAndRelease(FindState findState) {
+        // 把 findState 中的 subscriberMethods 转移到新创建的 subscriberMethods 中
         List<SubscriberMethod> subscriberMethods = new ArrayList<>(findState.subscriberMethods);
+        // 回收 findState
         findState.recycle();
+        // 将回收后的 findState 缓存到 FIND_STATE_POOL 中
         synchronized (FIND_STATE_POOL) {
             for (int i = 0; i < POOL_SIZE; i++) {
                 if (FIND_STATE_POOL[i] == null) {
@@ -138,10 +147,7 @@ class SubscriberMethodFinder {
     }
 
     private List<SubscriberMethod> findUsingReflection(Class<?> subscriberClass) {
-        /**
-         * 对于每一个订阅对象，都会有一个 FindState 对象，
-         * FindState 中保存了对象的订阅方法
-         */
+        // FindState 用来做订阅方法的校验和保存
         FindState findState = prepareFindState();
         findState.initForSubscriber(subscriberClass);
         while (findState.clazz != null) {
@@ -298,6 +304,9 @@ class SubscriberMethodFinder {
             }
         }
 
+        /**
+         *
+         */
         void moveToSuperclass() {
             if (skipSuperClasses) {
                 clazz = null;
