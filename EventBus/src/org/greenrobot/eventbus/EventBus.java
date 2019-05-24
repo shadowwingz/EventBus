@@ -171,6 +171,7 @@ public class EventBus {
             }
         }
 
+        // 将订阅者 subscriber 和所有订阅方法的参数类型 subscribedEvents 保存到 typesBySubscriber 中
         List<Class<?>> subscribedEvents = typesBySubscriber.get(subscriber);
         if (subscribedEvents == null) {
             subscribedEvents = new ArrayList<>();
@@ -178,6 +179,7 @@ public class EventBus {
         }
         subscribedEvents.add(eventType);
 
+        // 如果接收 sticky 事件，就分发 sticky 事件
         if (subscriberMethod.sticky) {
             if (eventInheritance) {
                 // Existing sticky events of all subclasses of eventType have to be considered.
@@ -243,10 +245,14 @@ public class EventBus {
 
     /** Posts the given event to the event bus. */
     public void post(Object event) {
+        // 获取当前线程的 posting 状态
         PostingThreadState postingState = currentPostingThreadState.get();
+        // 获取当前线程的事件队列
         List<Object> eventQueue = postingState.eventQueue;
+        // 把新注册的事件添加到队列中
         eventQueue.add(event);
 
+        // 判断当前线程的 posting 状态
         if (!postingState.isPosting) {
             postingState.isMainThread = Looper.getMainLooper() == Looper.myLooper();
             postingState.isPosting = true;
@@ -254,7 +260,9 @@ public class EventBus {
                 throw new EventBusException("Internal error. Abort state was not reset");
             }
             try {
+                // 如果事件队列不为空，就一直发送事件
                 while (!eventQueue.isEmpty()) {
+                    // 发送单个事件
                     postSingleEvent(eventQueue.remove(0), postingState);
                 }
             } finally {
@@ -377,6 +385,7 @@ public class EventBus {
                 subscriptionFound |= postSingleEventForEventType(event, postingState, clazz);
             }
         } else {
+            // post 单个事件
             subscriptionFound = postSingleEventForEventType(event, postingState, eventClass);
         }
         if (!subscriptionFound) {
@@ -393,6 +402,7 @@ public class EventBus {
     private boolean postSingleEventForEventType(Object event, PostingThreadState postingState, Class<?> eventClass) {
         CopyOnWriteArrayList<Subscription> subscriptions;
         synchronized (this) {
+            // 获取订阅了这个事件的 subscriptions 列表
             subscriptions = subscriptionsByEventType.get(eventClass);
         }
         if (subscriptions != null && !subscriptions.isEmpty()) {
@@ -401,6 +411,7 @@ public class EventBus {
                 postingState.subscription = subscription;
                 boolean aborted = false;
                 try {
+                    // 分发给订阅者
                     postToSubscription(subscription, event, postingState.isMainThread);
                     aborted = postingState.canceled;
                 } finally {
@@ -489,6 +500,7 @@ public class EventBus {
 
     void invokeSubscriber(Subscription subscription, Object event) {
         try {
+            // 回调订阅方法
             subscription.subscriberMethod.method.invoke(subscription.subscriber, event);
         } catch (InvocationTargetException e) {
             handleSubscriberException(subscription, event, e.getCause());
