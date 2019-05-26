@@ -48,7 +48,29 @@ public class EventBus {
     private static final EventBusBuilder DEFAULT_BUILDER = new EventBusBuilder();
     private static final Map<Class<?>, List<Class<?>>> eventTypesCache = new HashMap<>();
 
+    /**
+     * 以
+     *
+     * onReceive(Event event) {}
+     *
+     * EventBus.getDefault().register(MainActivity.this);
+     *
+     * 为例
+     *
+     * key : Event，
+     * value 是一个 List，List 中的对象都是 Subscription，
+     * 而 Subscription 中又封装了 MainActivity 和 onReceive，也就是订阅者信息。
+     *
+     * 同一个事件，可能有多个订阅者订阅
+     */
     private final Map<Class<?>, CopyOnWriteArrayList<Subscription>> subscriptionsByEventType;
+
+    /**
+     * key : 订阅者，比如 MainActivity
+     * value : Event
+     *
+     * 一个订阅者可能订阅了多种类型的事件
+     */
     private final Map<Object, List<Class<?>>> typesBySubscriber;
     private final Map<Class<?>, Object> stickyEvents;
 
@@ -215,10 +237,12 @@ public class EventBus {
 
     /** Only updates subscriptionsByEventType, not typesBySubscriber! Caller must update typesBySubscriber. */
     private void unsubscribeByEventType(Object subscriber, Class<?> eventType) {
+        // 获取订阅事件对应的所有订阅者信息
         List<Subscription> subscriptions = subscriptionsByEventType.get(eventType);
         if (subscriptions != null) {
             int size = subscriptions.size();
             for (int i = 0; i < size; i++) {
+                // 遍历所有的订阅者信息，找到要解除注册的那一个订阅者，然后把它移除掉。
                 Subscription subscription = subscriptions.get(i);
                 if (subscription.subscriber == subscriber) {
                     subscription.active = false;
@@ -232,11 +256,14 @@ public class EventBus {
 
     /** Unregisters the given subscriber from all event classes. */
     public synchronized void unregister(Object subscriber) {
+        // 获取订阅者订阅的所有事件类型
         List<Class<?>> subscribedTypes = typesBySubscriber.get(subscriber);
         if (subscribedTypes != null) {
             for (Class<?> eventType : subscribedTypes) {
+                // 对单个事件类型解除注册
                 unsubscribeByEventType(subscriber, eventType);
             }
+            // 将订阅者订阅的所有事件类型解除注册之后，从 typesBySubscriber 中移除订阅者
             typesBySubscriber.remove(subscriber);
         } else {
             Log.w(TAG, "Subscriber to unregister was not registered before: " + subscriber.getClass());
@@ -406,6 +433,7 @@ public class EventBus {
             subscriptions = subscriptionsByEventType.get(eventClass);
         }
         if (subscriptions != null && !subscriptions.isEmpty()) {
+            // 遍历  subscriptions 列表
             for (Subscription subscription : subscriptions) {
                 postingState.event = event;
                 postingState.subscription = subscription;
